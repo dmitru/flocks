@@ -11,20 +11,20 @@ from Visualization import ModelAnimator
 comGraph = ComGraphUtils.full_graph(6)
 
 # 2. choose desired formation
-h = np.kron(FormationsUtil.line_y(6), np.array([1, 0]))
+h = np.kron(FormationsUtil.rotate_90c(FormationsUtil.arrow_tip_6()), np.array([1, 0]))
 
 # 3. set up initial state
 ones = np.ones(h.size / 4)
-vx0 = -3.0
-vy0 = -3.0
+vx0 = -3
+vy0 = 0
 x0 = np.kron(np.array([0.0, 0.0, 1.0, 0.0, 2.0, 0.0, 3.0, 0.0, 4.0, 0.0, 5.0, 0.0]), np.array([1, 0])) + \
     vx0 * np.kron(ones, np.array([0, 1, 0, 0])) + \
     vy0 * np.kron(ones, np.array([0, 0, 0, 1]))
 
 # 4. choose other model parameters
-k = 0.3
-f1 = -3.0
-f2 = -3.0
+k = 0.0
+f1 = -4.0
+f2 = -4.0
 
 model = OrientableModel.circular_from_com_graph(comGraph, h, x0, k, f1, f2)
 
@@ -43,5 +43,5 @@ model = OrientableModel.circular_from_com_graph(comGraph, h, x0, k, f1, f2)
 # if not converged:
 #     print('Model didn\'t converge in %d steps' % data.shape[0])
 
-a = ModelAnimator(model, T=30, dt=0.01, field_to_show= 30*np.array([-0.2,1,-1,0.2]))
+a = ModelAnimator(model, draw_each_kth_frame=10, dt=0.01)
 a.show()

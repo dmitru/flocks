@@ -39,6 +39,7 @@ class LinearModel:
         self.F = F
         self.x0 = x0
         self.h = h
+        self.k = A[3,1]
         self.K = np.dot(self.B, self.F)
         self.T1 = np.kron(self.LG, self.K)
 
@@ -97,8 +98,40 @@ class OrientableModel:
         self.F = F
         self.x0 = x0
         self.h = h
+        self.k = A[3,1]
         self.K = np.dot(self.B, self.F)
         self.T1 = np.kron(self.LG, self.K)
+
+    def simulation_start(self):
+        def dx_dt(t, x):
+            Rz = self.compute_Rz(x, self.h)
+            y = np.dot(np.kron(np.eye(self.N), self.A), x).reshape((len(x), 1)) + np.dot(self.T1, (x.reshape((len(x), 1)) - Rz))
+            return np.asarray(y).reshape(len(x))
+
+        self.ode = spi.ode(dx_dt)
+        self.ode.set_integrator('vode', order=15, nsteps=5000, method='bdf')
+        self.ode.set_initial_value(self.x0, 0)
+
+    def simulation_step(self, dt):
+        self.ode.integrate(self.ode.t + dt)
+        return self.ode.y
+
+    def compute_formation_quality(self, x):
+        Rz = self.compute_Rz(x, self.h)
+        h = np.array(Rz).reshape(len(Rz))
+
+        ones = np.ones(h.size / 4)
+        es = [np.kron(ones, np.array([1,0,0,0])),
+              np.kron(ones, np.array([0,1,0,0])),
+              np.kron(ones, np.array([0,0,1,0])),
+              np.kron(ones, np.array([0,0,0,1]))]
+        x_relative = np.array(x)
+        h_relative = np.array(h)
+        for i in range(4):
+            x_relative -= x[i] * es[i]
+            h_relative -= h[i] * es[i]
+        delta = x_relative - h_relative
+        return np.linalg.norm(delta)
 
     def compute(self, T, dt):
         def dx_dt(t, x):
@@ -145,6 +178,14 @@ class OrientableModel:
             [t[0], -t[1]],
             [t[1], t[0]]
         ])
+
+    def set_k(self, k):
+        A = np.array([[0.0, 1.0, 0.0, 0.0],
+                      [0.0, 0.0, 0.0, -k],
+                      [0.0, 0.0, 0.0, 1.0],
+                      [0.0, k,   0.0, 0.0]])
+        self.k = k
+        self.A = A
 
     @staticmethod
     def circular_from_com_graph(com_graph, h, x0, k, f1, f2):

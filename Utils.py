@@ -10,6 +10,14 @@ def velocity_vector(vpv):
 
 class FormationsUtil:
     @staticmethod
+    def rotate_90c(h):
+        res = np.zeros(len(h))
+        for i in range(int(len(h) / 2)):
+            res[2*i] = h[2*i + 1]
+            res[2*i + 1] = -h[2*i]
+        return res
+
+    @staticmethod
     def arrow_tip_4():
         '''Returns vector, describing formation of arrow tip configuration for 4 agents'''
         return np.array([0.0, 0.0,
@@ -39,6 +47,14 @@ class FormationsUtil:
         for i in range(k):
             t.append(0.0)
             t.append(float(i))
+        return np.array(t)
+
+    @staticmethod
+    def line_x(k):
+        t = []
+        for i in range(k):
+            t.append(float(i))
+            t.append(0.0)
         return np.array(t)
 
     @staticmethod
