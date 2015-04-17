@@ -101,6 +101,7 @@ class OrientableModel:
         self.k = A[3,1]
         self.K = np.dot(self.B, self.F)
         self.T1 = np.kron(self.LG, self.K)
+        self.delta_prev = None
 
     def simulation_start(self):
         def dx_dt(t, x):
@@ -116,7 +117,7 @@ class OrientableModel:
         self.ode.integrate(self.ode.t + dt)
         return self.ode.y
 
-    def compute_formation_quality(self, x):
+    def compute_formation_quality(self, x, dt):
         Rz = self.compute_Rz(x, self.h)
         h = np.array(Rz).reshape(len(Rz))
 
@@ -131,9 +132,14 @@ class OrientableModel:
             x_relative -= x[i] * es[i]
             h_relative -= h[i] * es[i]
         delta = x_relative - h_relative
-        return np.linalg.norm(delta)
 
-    def compute(self, T, dt):
+        result = None if self.delta_prev is None else np.abs(self.delta_prev - delta) / dt
+        self.delta_prev = delta
+        return np.linalg.norm(delta), (None if result is None else np.linalg.norm(result))
+
+        #return np.linalg.norm(delta)
+
+    def compute(self, T, dt, print_progress=False):
         def dx_dt(t, x):
             Rz = self.compute_Rz(x, self.h)
             y = np.dot(np.kron(np.eye(self.N), self.A), x).reshape((len(x), 1)) + np.dot(self.T1, (x.reshape((len(x), 1)) - Rz))
@@ -146,7 +152,7 @@ class OrientableModel:
         last_percent = 0
         while ode.successful() and ode.t < T:
             curr_percent = int((100 * ode.t) / T)
-            if curr_percent > last_percent:
+            if print_progress and curr_percent > last_percent:
                 print('%d%%' % curr_percent)
                 last_percent = curr_percent
             ode.integrate(ode.t + dt)

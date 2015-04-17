@@ -7,17 +7,19 @@ from Utils import position_vector, FormationsUtil
 from Models import LinearModel, OrientableModel
 from Visualization import ModelAnimator
 
+n = 4
+
 # 1. com graph
-comGraph = ComGraphUtils.full_graph(6)
+comGraph = ComGraphUtils.full_graph(n)
 
 # 2. choose desired formation
-h = np.kron(FormationsUtil.rotate_90c(FormationsUtil.arrow_tip_6()), np.array([1, 0]))
+h = np.kron(FormationsUtil.rotate_90c(FormationsUtil.square_4()), np.array([1, 0]))
 
 # 3. set up initial state
 ones = np.ones(h.size / 4)
-vx0 = -3
-vy0 = 0
-x0 = np.kron(np.array([0.0, 0.0, 1.0, 0.0, 2.0, 0.0, 3.0, 0.0, 4.0, 0.0, 5.0, 0.0]), np.array([1, 0])) + \
+vx0 = -1.0
+vy0 = -0.0
+x0 = np.kron(np.array([0.0, 0.0, 1.0, 0.0, 2.0, 0.0, 3.0, 0.0]), np.array([1, 0])) + \
     vx0 * np.kron(ones, np.array([0, 1, 0, 0])) + \
     vy0 * np.kron(ones, np.array([0, 0, 0, 1]))
 

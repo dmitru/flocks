@@ -1,6 +1,7 @@
 __author__ = 'dmitru'
 
 import networkx as nx
+from random import randint
 
 class ComGraphUtils:
     '''Contains functions for generating different communication graphs'''
@@ -42,3 +43,15 @@ class ComGraphUtils:
         G.add_edge(4, 1)
         G.add_edge(5, 2)
         return G
+
+    @staticmethod
+    def random_graph(v, e):
+        '''Returns a random connected graph with v vertices and e edges'''
+        while True:
+            G = nx.random_graphs.complete_graph(v)
+            while G.number_of_edges() > e:
+                a, b = None, None
+                while a is None or a == b:
+                    a, b = randint(0, v), randint(0, v)
+                G.remove_edge(a, b)
+

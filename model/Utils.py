@@ -1,6 +1,7 @@
 __author__ = 'dmitru'
 
 import numpy as np
+import random
 
 def position_vector(vpv):
     return np.kron(vpv[0::4], np.array([1,0])) + np.kron(vpv[2::4], np.array([0,1]))
@@ -72,3 +73,27 @@ class FormationsUtil:
             h_relative -= h[i] * es[i]
         delta = x_relative - h_relative
         return np.linalg.norm(delta)
+
+    @staticmethod
+    def random_positions(num_agents, r=1.0):
+        result = [2 * num_agents * (random.random() - 0.5) for _ in range(2*num_agents)]
+        return result
+
+    @staticmethod
+    def extend_position_to_vpv(pos, vx0=0, vy0=0):
+        assert len(pos) % 2 == 0
+        n = len(pos) / 2
+        ones = np.ones(n)
+        return np.kron(np.array(pos), np.array([1, 0])) + \
+            vx0 * np.kron(ones, np.array([0, 1, 0, 0])) + \
+            vy0 * np.kron(ones, np.array([0, 0, 0, 1]))
+
+
+
+if __name__ == '__main__':
+    for i in range(1, 8):
+        print(FormationsUtil.random_positions(i))
+
+    for i in range(1, 8):
+        p = FormationsUtil.random_positions(i)
+        print(FormationsUtil.extend_position_to_vpv(p, vx0=1.0, vy0=-1.0))

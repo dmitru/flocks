@@ -67,19 +67,28 @@ class ModelAnimator(object):
             for _ in range(self.draw_each_kth_frame):
                 ys = self.model.simulation_step(self.dt)
             cnt += 1
-            yield cnt, ys, self.model.compute_formation_quality(ys)
+            yield cnt, ys, self.model.compute_formation_quality(ys, self.dt)
 
     def update(self, i):
         step, data, quality = next(self.stream)
-        self.quality_y.append(quality)
+        if quality is not None:
+            while len(self.quality_y) < len(quality):
+                self.quality_y.append([])
+            for i in range(len(quality)):
+                self.quality_y[i].append(quality[i])
         self.update_draw_bounds(data)
         self.scat = self.anim_ax.scatter(data[::4], data[2::4], s=self.s, c=self.c, animated=True)
-        self.formation_quality, = self.plot_ax.plot(self.quality_y, c='b')
+        t = list(zip(self.quality_y))
+        plot_args = []
+        for i in t:
+            plot_args.append(i[0])
+            plot_args.append('r')
+        self.formation_quality = self.plot_ax.plot(*plot_args)
         if step % 4 == 0:
             self.model_info_text.set_text('k = %.3f' % self.model.k)
             self.step_text.set_text('Step %d' % step)
-            self.quality_text.set_text('%f' % (quality))
-        return self.anim_ax.get_xaxis(), self.scat, self.step_text, self.model_info_text, self.formation_quality, self.quality_text
+            self.quality_text.set_text('%f' % (quality[0]))
+        return (self.anim_ax.get_xaxis(), self.scat, self.step_text, self.model_info_text, self.quality_text) + tuple(self.formation_quality)
 
     def update_draw_bounds(self, data=None, new_bounds=None):
         assert data is not None or new_bounds is not None
