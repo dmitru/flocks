@@ -89,6 +89,7 @@ class OrientableModel:
         assert(h.size == num_agents * 4)
         assert(x0.size == num_agents * 4)
 
+        self.text_to_show = None
         self.CG = com_graph
         Q = nx.linalg.adjacency_matrix(com_graph).todense()
         D = np.diag([sum([1 for e in com_graph.edges() if e[0] == i]) for i in com_graph.nodes()])
@@ -118,24 +119,42 @@ class OrientableModel:
         return self.ode.y
 
     def compute_formation_quality(self, x, dt):
-        Rz = self.compute_Rz(x, self.h)
-        h = np.array(Rz).reshape(len(Rz))
-
-        ones = np.ones(h.size / 4)
+        ones = np.ones(self.h.size / 4)
         es = [np.kron(ones, np.array([1,0,0,0])),
               np.kron(ones, np.array([0,1,0,0])),
               np.kron(ones, np.array([0,0,1,0])),
               np.kron(ones, np.array([0,0,0,1]))]
         x_relative = np.array(x)
-        h_relative = np.array(h)
         for i in range(4):
             x_relative -= x[i] * es[i]
-            h_relative -= h[i] * es[i]
-        delta = x_relative - h_relative
 
-        result = None if self.delta_prev is None else np.abs(self.delta_prev - delta) / dt
+        rot = np.matrix(self.rot_matrix((x[1], x[3])))
+
+        temp = []
+        for i in range(self.h.size // 4):
+            x_agent = (x_relative[4*i], x_relative[4*i + 2])
+            t = np.dot(x_agent, rot)
+            temp.append(t[0,0])
+            temp.append(t[0,1])
+        temp = np.array(temp)
+        delta = temp
+
+        #return res
+
+        #result1 = None if self.delta_prev is None else np.linalg.norm(position_vector(self.delta_prev - delta) / dt)
+        #result2 = None if self.delta_prev is None else np.linalg.norm(position_vector(self.compute_Rz(x, (self.delta_prev - delta) / dt)))
+        #result3 = None if self.delta_prev is None else np.linalg.norm(velocity_vector(self.delta_prev - delta) / dt)
+        #result4 = None if self.delta_prev is None else np.linalg.norm(velocity_vector(self.compute_Rz(x, (self.delta_prev - delta) / dt)))
+
+        result = (np.linalg.norm(self.delta_prev - delta), ) if self.delta_prev is not None else None
+        self.text_to_show = '%.6f %s' % (dt, str(self.delta_prev - delta) if self.delta_prev is not None else '')
+
         self.delta_prev = delta
-        return np.linalg.norm(delta), (None if result is None else np.linalg.norm(result))
+
+        return (result, ) if result is not None else (0, )
+
+        return (np.linalg.norm(delta), result1, result2, result3, result4) #np.linalg.norm(delta), (None if result is None else np.linalg.norm(result)), \
+
 
         #return np.linalg.norm(delta)
 
@@ -163,6 +182,7 @@ class OrientableModel:
         return np.vstack(ys)
 
     def compute_Rz(self, x, h):
+        assert x.size == h.size
         res = np.zeros((len(x), 1))
         h_column = h.reshape((len(x), 1))
         # for each agent...

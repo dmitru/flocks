@@ -85,8 +85,9 @@ class ModelAnimator(object):
             plot_args.append('r')
         self.formation_quality = self.plot_ax.plot(*plot_args)
         if step % 4 == 0:
+            #self.model_info_text.set_text('k = %.3f' % self.model.k)
             self.model_info_text.set_text('k = %.3f' % self.model.k)
-            self.step_text.set_text('Step %d' % step)
+            self.step_text.set_text('Step %d\n%s' % (step, self.model.text_to_show))
             self.quality_text.set_text('%f' % (quality[0]))
         return (self.anim_ax.get_xaxis(), self.scat, self.step_text, self.model_info_text, self.quality_text) + tuple(self.formation_quality)
 
