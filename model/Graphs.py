@@ -1,6 +1,7 @@
 __author__ = 'dmitru'
 
 import networkx as nx
+import random
 from random import randint
 
 class ComGraphUtils:
@@ -45,13 +46,27 @@ class ComGraphUtils:
         return G
 
     @staticmethod
-    def random_graph(v, e):
-        '''Returns a random connected graph with v vertices and e edges'''
-        while True:
-            G = nx.random_graphs.complete_graph(v)
-            while G.number_of_edges() > e:
-                a, b = None, None
-                while a is None or a == b:
-                    a, b = randint(0, v), randint(0, v)
-                G.remove_edge(a, b)
+    def random_graph(v, e, directed=True):
+        '''Returns a random graph containing spanning tree with v vertices and e edges'''
+        assert (e <= (v*(v-1))/2 and not directed) or (e <= (v*(v-1)) and directed)
+        G = nx.random_graphs.empty_graph(v)
+        in_spanning_tree = [0]
+        edges_counter = 0
+        for i in range(1, v):
+            j = random.sample(in_spanning_tree, 1)[0]
+            in_spanning_tree.append(i)
+            G.add_edge(j, i)
+            if directed:
+                G.add_edge(i, j)
+            edges_counter += 1
+        while edges_counter < e:
+            a, b = random.randint(1, v - 1), random.randint(1, v - 1)
+            if not G.has_edge(a, b):
+                edges_counter += 1
+                G.add_edge(a, b)
+                if directed:
+                    G.add_edge(b, a)
+        return G
+
+
 
