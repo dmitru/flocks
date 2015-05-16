@@ -49,7 +49,9 @@ class ComGraphUtils:
     def random_graph(v, e, directed=True):
         '''Returns a random graph containing spanning tree with v vertices and e edges'''
         assert (e <= (v*(v-1))/2 and not directed) or (e <= (v*(v-1)) and directed)
-        G = nx.random_graphs.empty_graph(v)
+        G = nx.DiGraph()
+        for i in range(v):
+            G.add_node(i)
         in_spanning_tree = [0]
         edges_counter = 0
         for i in range(1, v):
@@ -61,11 +63,14 @@ class ComGraphUtils:
             edges_counter += 1
         while edges_counter < e:
             a, b = random.randint(1, v - 1), random.randint(1, v - 1)
-            if not G.has_edge(a, b):
-                edges_counter += 1
-                G.add_edge(a, b)
-                if directed:
-                    G.add_edge(b, a)
+            if a == b:
+                continue
+            if G.has_edge(a, b):
+                continue
+            edges_counter += 1
+            G.add_edge(a, b)
+            if directed:
+                G.add_edge(b, a)
         return G
 
 

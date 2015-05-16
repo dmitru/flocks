@@ -14,7 +14,7 @@ def run_experiment_with_params(comGraph, x0, h, vx0, vy0, k, f1, f2, T):
     return measure_convergence(model, T)
 
 def measure_convergence(model, T, tol=1e-3, dt=0.1):
-    data = model.compute(T, dt, print_progress=False)
+    data = model.compute(T, dt, print_progress=True)
     converged = False
     for step in range(data.shape[0]):
         e = model.compute_formation_quality(data[step,:], dt)[0]
@@ -43,6 +43,8 @@ for vx0 in (3.0,):
     x0 = np.kron(np.array([0.0, 0.0, 1.0, 0.0, 2.0, 0.0, 3.0, 0.0, 4.0, 0.0, 5.0, 0.0]), np.array([1, 0])) + \
         vx0 * np.kron(ones, np.array([0, 1, 0, 0])) + \
         vy0 * np.kron(ones, np.array([0, 0, 0, 1]))
+
+    print(x0, h)
 
     convergence_steps = run_experiment_with_params(comGraph, x0, h, vx0, vy0, k, f1, f2, 30)
     print (vx0, convergence_steps * dt if convergence_steps else '-')
