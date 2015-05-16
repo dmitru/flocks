@@ -1,8 +1,11 @@
+import time
+
 __author__ = 'dmitru'
 
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+from matplotlib import collections  as mc
 import networkx as nx
 import numpy as np
 import scipy
@@ -26,12 +29,18 @@ class ModelAnimator(object):
         self.fig.canvas.mpl_connect('key_press_event', self.onKeyPress)
         self.anim_ax = self.fig.add_subplot(121, aspect='equal')
         self.plot_ax = self.fig.add_subplot(122)
+        self.old_edges_collection = None
         # Then setup FuncAnimation.
         self.model.simulation_start()
+        self.set_up_called = False
         self.ani = animation.FuncAnimation(self.fig, self.update, interval=0.03,
                                            init_func=self.setup_plot, blit=True, repeat=True)
 
     def setup_plot(self):
+        if self.set_up_called:
+            return ()
+
+        self.set_up_called = True
         step, xy, quality = next(self.stream)
         self.quality_y = []
 
@@ -40,16 +49,19 @@ class ModelAnimator(object):
         self.step_text = self.anim_ax.text(0.02, 0.95, '', transform=self.anim_ax.transAxes)
         self.model_info_text = self.anim_ax.text(0.02, 0.92, '', transform=self.anim_ax.transAxes)
         self.quality_text = self.plot_ax.text(0.02, 0.95, '', transform=self.plot_ax.transAxes)
-        self.scat = self.anim_ax.scatter(xy[0::4], xy[2::4], s=self.s, c=self.c, animated=True)
         self.anim_ax.get_xaxis().set_animated(True)
         self.anim_ax.get_yaxis().set_animated(True)
         self.anim_ax.get_xaxis().set_ticklabels([])
         self.anim_ax.get_yaxis().set_ticklabels([])
+        self.scat = self.anim_ax.scatter(xy[0::4], xy[2::4], s=self.s, c=self.c, animated=True)
+        self.edges = None
+        self.update_called_one_time = False
 
         self.formation_quality, = self.plot_ax.plot(self.quality_y, c='b')
         self.update_draw_bounds(new_bounds=(-self.field_size, self.field_size, -self.field_size, self.field_size))
         self.anim_ax.grid()
-        return self.anim_ax.get_xaxis(), self.scat, self.step_text, self.model_info_text, self.formation_quality, self.quality_text
+        return tuple()
+        return self.anim_ax.get_xaxis(), self.step_text, self.model_info_text, self.formation_quality, self.quality_text
 
     def onClick(self, event):
         self.pause ^= True
@@ -70,13 +82,24 @@ class ModelAnimator(object):
 
     def update(self, i):
         step, data, quality = next(self.stream)
+        for c in self.anim_ax.collections:
+            self.anim_ax.collections.remove(c)
+
         if quality is not None:
             while len(self.quality_y) < len(quality):
                 self.quality_y.append([])
             for i in range(len(quality)):
                 self.quality_y[i].append(quality[i])
+
         self.update_draw_bounds(data)
         self.scat = self.anim_ax.scatter(data[::4], data[2::4], s=self.s, c=self.c, animated=True)
+        segments = []
+        for edge in self.model.CG.edges():
+            segments.append([(data[4*edge[0]], data[4*edge[0] + 2]), (data[4*edge[1]], data[4*edge[1] + 2])])
+        edges_collection = mc.LineCollection(segments, colors=[(1,0,0,0.3) for _ in range(len(segments))])
+        if self.update_called_one_time:
+            self.edges = self.anim_ax.add_collection(edges_collection)
+        self.old_edges_collection = edges_collection
         t = list(zip(self.quality_y))
         plot_args = []
         for i in t:
@@ -84,11 +107,13 @@ class ModelAnimator(object):
             plot_args.append('r')
         self.formation_quality = self.plot_ax.plot(*plot_args)
         if step % 4 == 0:
-            #self.model_info_text.set_text('k = %.3f' % self.model.k)
             self.model_info_text.set_text('k = %.3f' % self.model.k)
-            self.step_text.set_text('Step %d\n%s' % (step, self.model.text_to_show))
-            self.quality_text.set_text('%f' % (quality[0]))
-        return (self.anim_ax.get_xaxis(), self.scat, self.step_text, self.model_info_text, self.quality_text) + tuple(self.formation_quality)
+            self.step_text.set_text('Step %d' % (step))
+        if not self.update_called_one_time:
+            self.update_called_one_time = True
+            return tuple()
+        return (self.anim_ax.get_xaxis(), edges_collection, self.scat, self.step_text, self.model_info_text,
+                self.quality_text) + tuple(self.formation_quality)
 
     def update_draw_bounds(self, data=None, new_bounds=None):
         assert data is not None or new_bounds is not None
