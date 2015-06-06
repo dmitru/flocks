@@ -70,7 +70,7 @@ class LinearModel:
 class OrientableModel:
     '''Describes two-dimensional model of moving agents with communication graph,
     formation reorients intself along the line of the flight'''
-    def __init__(self, com_graph, num_agents, A, B, F, h, x0):
+    def __init__(self, com_graph, num_agents, A, B, F, h, x0, D=1e4, r0=0.5, r1=0.01):
         '''Parameters:
         com_graph - communication graph that agents use,
         agents - list of Agent objects,
@@ -78,6 +78,8 @@ class OrientableModel:
         F - 2x4 feedback matrix
         h - desired formation
         x0 - initial position-velocity vector of all agents
+        D=1e4, r0=1.0, r1=0.01 - parameters of repulsion
+        (see "Outdoor Flocking ...", pp. 5-6)
         '''
         self.N = num_agents
         assert(type(com_graph) == nx.DiGraph)
@@ -92,8 +94,8 @@ class OrientableModel:
         self.text_to_show = None
         self.CG = com_graph
         Q = nx.linalg.adjacency_matrix(com_graph).todense()
-        D = np.diag([sum([1 for e in com_graph.edges() if e[0] == i]) for i in com_graph.nodes()])
-        self.LG = np.dot(np.linalg.pinv(D), (D - Q))
+        Diag = np.diag([sum([1 for e in com_graph.edges() if e[0] == i]) for i in com_graph.nodes()])
+        self.LG = np.dot(np.linalg.pinv(Diag), (Diag - Q))
         self.A = A
         self.B = B
         self.F = F
@@ -103,12 +105,43 @@ class OrientableModel:
         self.K = np.dot(self.B, self.F)
         self.T1 = np.kron(self.LG, self.K)
         self.delta_prev = None
+        self.D = D
+        self.r0 = r0
+        self.r1 = r1
 
     def simulation_start(self):
         def dx_dt(t, x):
             Rz = self.compute_Rz(x, self.h)
+
+            # basic dynamics of the model
             y = np.dot(np.kron(np.eye(self.N), self.A), x).reshape((len(x), 1)) + np.dot(self.T1, (x.reshape((len(x), 1)) - Rz))
-            return np.asarray(y).reshape(len(x))
+            y = np.asarray(y).reshape(len(x))
+
+            # TODO: make it a model's parameters
+            D = self.D
+            r0 = self.r0
+            r1 = self.r1
+
+            y_rep = np.zeros(y.shape)
+            # calculate repulsive acceleration
+            for i in range(self.N):
+                a_i = np.array([0.0, 0.0])
+                for j in range(self.N):
+                    if i == j:
+                        continue
+                    x_i = np.array([x[i * 4], x[i * 4 + 2]])
+                    x_j = np.array([x[j * 4], x[j * 4 + 2]])
+                    x_ij = x_j - x_i
+                    x_ij_norm = np.linalg.norm(x_ij)
+                    if x_ij_norm < r0:
+                        a_i = a_i -D * min(r1, r0 - x_ij_norm) * x_ij / x_ij_norm
+
+                y_rep[i * 4 + 1] = a_i[0]
+                y_rep[i * 4 + 3] = a_i[1]
+
+            print(np.linalg.norm(y), np.linalg.norm(y_rep))
+            y += y_rep
+            return y
 
         self.ode = spi.ode(dx_dt)
         self.ode.set_integrator('vode', order=15, nsteps=5000, method='bdf')

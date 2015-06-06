@@ -29,10 +29,10 @@ def measure_convergence(model, T, tol=1e-3, dt=0.1):
         print('Model didn\'t converge in %d steps' % data.shape[0])
         return None
 
-num_agents = 20
-comGraph = ComGraphUtils.random_graph(num_agents, num_agents, directed=False)
-#comGraph = ComGraphUtils.full_graph(num_agents)
-h = np.kron(FormationsUtil.rotate_90c(FormationsUtil.random_positions(num_agents, 0.1)), np.array([1, 0]))
+num_agents = 10
+#comGraph = ComGraphUtils.random_graph(num_agents, num_agents, directed=False)
+comGraph = ComGraphUtils.full_graph(num_agents)
+h = np.kron(FormationsUtil.rotate_90c(FormationsUtil.random_positions(num_agents, 3.0)), np.array([1, 0]))
 k = 0.0
 f1 = -5.5
 f2 = -5.5
@@ -42,7 +42,7 @@ dt = 0.001
 for vx0 in (5.0,):
     ones = np.ones(h.size / 4)
     vy0 = 20
-    x0 = np.kron(FormationsUtil.random_positions(num_agents, 0.2), np.array([1, 0])) + \
+    x0 = np.kron(FormationsUtil.random_positions(num_agents, 4.0), np.array([1, 0])) + \
         vx0 * np.kron(ones, np.array([0, 1, 0, 0])) + \
         vy0 * np.kron(ones, np.array([0, 0, 0, 1]))
 

@@ -76,7 +76,7 @@ class FormationsUtil:
 
     @staticmethod
     def random_positions(num_agents, r=1.0):
-        result = [2 * num_agents * r*(random.random() - 0.5) for _ in range(2*num_agents)]
+        result = [2 * r * (random.random() - 0.5) for _ in range(2*num_agents)]
         return result
 
     @staticmethod
