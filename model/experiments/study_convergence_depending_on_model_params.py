@@ -9,7 +9,7 @@ from Visualization import ModelAnimator
 
 def run_experiment_with_params(comGraph, x0, h, vx0, vy0, k, f1, f2, T):
     model = OrientableModel.circular_from_com_graph(comGraph, h, x0, k, f1, f2, D=1e4, orientable=True, acc=0)
-    a = ModelAnimator(model, draw_each_kth_frame=10, dt=0.01)
+    a = ModelAnimator(model, draw_each_kth_frame=10, dt=0.01, desired_pos=False)
     a.show()
     return measure_convergence(model, T)
 

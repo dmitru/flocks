@@ -1,18 +1,22 @@
 __author__ = 'dmitry'
 
 from IPython import parallel
-clients = parallel.Client(profile='nbserver')
-clients.block = True  # use synchronous computations
-print clients.ids
 
-dview = clients[:]
-lbview = clients.load_balanced_view()
+class Runner:
+    def __init__(self, profile='nbserver'):
+        clients = parallel.Client()
+        clients.block = True
+        self.dview = clients[:]
+        self.lbview = clients.load_balanced_view()
 
-dview.execute('import numpy as np')
-dview.execute('import math')
+    def execute(self, statements):
+        if isinstance(statements, str):
+            statements = [statements]
+        for statement in statements:
+            self.dview.execute(statement)
 
-dview.push(dict(
-
-))
+    def push(self, env):
+        self.dview.push(env)
+        
 
 

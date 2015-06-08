@@ -27,11 +27,11 @@ def measure_convergence(model, T, dt=0.1, tol=1e-3):
     converged = False
     last_time_printed_step = None
     for step in range(int (T / dt)):
-        y = model.simulation_step(dt)
+        y ,rel_h = model.simulation_step(dt)
         e = model.compute_formation_quality(y, dt)[0]
         #print(step, e)
         if step > 1:
-            e = e[0]
+            e = e
             now = datetime.now()
             if last_time_printed_step is None or (now - last_time_printed_step).seconds > 3:
                 print(step, abs(e))
