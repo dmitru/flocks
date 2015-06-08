@@ -54,23 +54,28 @@ class ComGraphUtils:
             G.add_node(i)
         in_spanning_tree = [0]
         edges_counter = 0
+        edges_not_taken = set()
+        for i in range(v):
+            for j in range(v):
+                if i != j:
+                    edges_not_taken.add((i, j))
         for i in range(1, v):
             j = random.sample(in_spanning_tree, 1)[0]
             in_spanning_tree.append(i)
             G.add_edge(j, i)
-            if directed:
+            edges_not_taken.remove((j, i))
+            if not directed:
                 G.add_edge(i, j)
+                edges_not_taken.remove((i, j))
             edges_counter += 1
         while edges_counter < e:
-            a, b = random.randint(1, v - 1), random.randint(1, v - 1)
-            if a == b:
-                continue
-            if G.has_edge(a, b):
-                continue
+            a, b = random.sample(edges_not_taken, 1)[0]
             edges_counter += 1
             G.add_edge(a, b)
-            if directed:
+            edges_not_taken.remove((a, b))
+            if not directed:
                 G.add_edge(b, a)
+                edges_not_taken.remove((b, a))
         return G
 
 

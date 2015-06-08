@@ -88,7 +88,21 @@ class FormationsUtil:
             vx0 * np.kron(ones, np.array([0, 1, 0, 0])) + \
             vy0 * np.kron(ones, np.array([0, 0, 0, 1]))
 
+def laplace_matrix(G):
+    import networkx as nx
+    Q = nx.linalg.adjacency_matrix(G).todense()
+    Diag = np.diag([sum([1 for e in G.edges() if e[0] == i]) for i in G.nodes()])
+    return (Diag - Q)
 
+def rot_matrix(v):
+        '''Returns the two-dimensional rotation matrix 2x2 that
+        rotates vector e1 to point in v direction'''
+        #print(np.linalg.norm(v))
+        t = np.array(v) / np.linalg.norm(v)
+        return np.array([
+            [t[0], -t[1]],
+            [t[1], t[0]]
+        ])
 
 if __name__ == '__main__':
     for i in range(1, 8):
