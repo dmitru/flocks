@@ -15,7 +15,7 @@ from Utils import FormationsUtil, position_vector, get_cmap
 class ModelAnimator(object):
     """An animated scatter plot using matplotlib.animations.FuncAnimation.
     Params: T - time to animate, dt - time step to show"""
-    def __init__(self, model, dt=0.01, draw_each_kth_frame=10, field_size=10, trace_size=200, trace_step=2):
+    def __init__(self, model, dt=0.01, draw_each_kth_frame=10, field_size=10, edges=True, desired_pos=True, trace=True, trace_size=200, trace_step=2):
         self.model = model
         self.N = model.N
         self.dt = dt
@@ -26,6 +26,10 @@ class ModelAnimator(object):
         self.trace_size = trace_size
         self.trace_step = trace_step
         self.trace_positions = []
+
+        self.plot_edges = edges
+        self.plot_desired_positions = desired_pos
+        self.plot_trace = trace
 
         # Setup the figure and axes...
         self.fig = plt.figure(figsize=(18, 16))
@@ -100,37 +104,40 @@ class ModelAnimator(object):
 
         self.update_draw_bounds(data)
         self.scat = self.anim_ax.scatter(data[::4], data[2::4], s=self.s, c=self.c, animated=True)
-        self.scat2 = self.anim_ax.scatter(rel_h[::2], rel_h[1::2], s=self.s * 3, c=self.c, animated=True, alpha=0.3, marker='s')
+        if self.plot_desired_positions:
+            self.scat2 = self.anim_ax.scatter(rel_h[::2], rel_h[1::2], s=self.s * 3, c=self.c, animated=True, alpha=0.3, marker='s')
 
         #self.scat_h = self.anim_ax_2.scatter(self.model.h[::4], self.model.h[2::4], s=self.s, c='blue', animated=True)
         #self.scat_h_2 = self.anim_ax_2.scatter(self.model.rel_h[::2], self.model.rel_h[1::2], s=self.s, c='red', animated=True)
         #self.scat_h_3 = self.anim_ax_2.scatter(self.model.current_direction[0], self.model.current_direction[1], s=self.s, c='green', animated=True)
 
-        segments = []
-        for edge in self.model.CG.edges():
-            segments.append([(data[4*edge[0]], data[4*edge[0] + 2]), (data[4*edge[1]], data[4*edge[1] + 2])])
-        edges_collection = mc.LineCollection(segments, colors=[(1,0,0,0.3) for _ in range(len(segments))])
-        if self.update_called_one_time:
-            self.edges = self.anim_ax.add_collection(edges_collection)
-        self.old_edges_collection = edges_collection
+        if self.plot_edges:
+            segments = []
+            for edge in self.model.CG.edges():
+                segments.append([(data[4*edge[0]], data[4*edge[0] + 2]), (data[4*edge[1]], data[4*edge[1] + 2])])
+            edges_collection = mc.LineCollection(segments, colors=[(1,0,0,0.3) for _ in range(len(segments))])
+            if self.update_called_one_time:
+                self.edges = self.anim_ax.add_collection(edges_collection)
+            self.old_edges_collection = edges_collection
 
-        if step % self.trace_step == 0:
-            self.trace_positions.append(data)
-            if len(self.trace_positions) > self.trace_size:
-                self.trace_positions.pop(0)
-        trace_segments = []
-        trace_colors = []
-        for i in range(self.model.N):
-            for j in range(len(self.trace_positions) - 1):
-                cur = self.trace_positions[j + 1]
-                prev = self.trace_positions[j]
-                trace_segments.append(((cur[4*i], cur[4*i+2]), (prev[4*i], prev[4*i+2])))
-                color = list(self.c[i][:])
-                color[-1] = max(0.4, float(j) / len(self.trace_positions))
-                trace_colors.append(color)
-        trace_segment_collection = mc.LineCollection(trace_segments, colors=trace_colors)
-        if self.update_called_one_time:
-            self.traces = self.anim_ax.add_collection(trace_segment_collection)
+        if self.plot_trace:
+            if step % self.trace_step == 0:
+                self.trace_positions.append(data)
+                if len(self.trace_positions) > self.trace_size:
+                    self.trace_positions.pop(0)
+            trace_segments = []
+            trace_colors = []
+            for i in range(self.model.N):
+                for j in range(len(self.trace_positions) - 1):
+                    cur = self.trace_positions[j + 1]
+                    prev = self.trace_positions[j]
+                    trace_segments.append(((cur[4*i], cur[4*i+2]), (prev[4*i], prev[4*i+2])))
+                    color = list(self.c[i][:])
+                    color[-1] = max(0.4, float(j) / len(self.trace_positions))
+                    trace_colors.append(color)
+            trace_segment_collection = mc.LineCollection(trace_segments, colors=trace_colors)
+            if self.update_called_one_time:
+                self.traces = self.anim_ax.add_collection(trace_segment_collection)
 
         t = list(zip(self.quality_y))
         plot_args = []
@@ -145,11 +152,16 @@ class ModelAnimator(object):
         if not self.update_called_one_time:
             self.update_called_one_time = True
             return tuple()
-        return (self.anim_ax.get_xaxis(),
-                #self.anim_ax_2.get_xaxis(), self.scat_h, self.scat_h_2, self.scat_h_3,
-                edges_collection,
-                self.scat, self.scat2, self.step_text, self.model_info_text, trace_segment_collection,
-                self.quality_text) + tuple(self.formation_quality)
+
+        artists = [self.anim_ax.get_xaxis(), self.scat, self.step_text, self.model_info_text, self.quality_text] + self.formation_quality
+        if self.plot_edges:
+            artists.append(edges_collection)
+        if self.plot_trace:
+            artists.append(trace_segment_collection)
+        if self.plot_desired_positions:
+            artists.append(self.scat2)
+        return artists
+
 
     def update_draw_bounds(self, data=None, new_bounds=None):
         assert data is not None or new_bounds is not None
