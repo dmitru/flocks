@@ -1,3 +1,6 @@
+from datetime import datetime
+import os
+
 __author__ = 'dmitru'
 
 import numpy as np
@@ -106,6 +109,27 @@ def rot_matrix(v):
 
 import matplotlib.cm as cmx
 import matplotlib.colors as colors
+
+class ExperimentManager:
+    @staticmethod
+    def init(name='experiment', root_path='.', append_timestamp=True):
+        np.random.seed(123)
+
+        ExperimentManager.counter = 0
+        ExperimentManager.name = name
+        if append_timestamp:
+            now = datetime.now()
+            ExperimentManager.name += '_' + '%d_%d_%d__%d_%d_%d' % (now.year, now.month, now.day, now.hour, now.minute, now.second)
+        ExperimentManager.base_name = os.path.join(root_path, name)
+        if not os.path.exists(ExperimentManager.base_name):
+            os.makedirs(ExperimentManager.base_name)
+
+    @staticmethod
+    def next_filename(extension='.png', increment=True):
+        res = os.path.join(ExperimentManager.base_name, '%s_%d%s' % (ExperimentManager.name, ExperimentManager.counter, extension))
+        if increment:
+            ExperimentManager.counter += 1
+        return res
 
 def get_cmap(N):
     '''Returns a function that maps each index in 0, 1, ... N-1 to a distinct

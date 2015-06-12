@@ -2,9 +2,9 @@ __author__ = 'dmitry'
 
 from IPython import parallel
 
-class Runner:
+class ParallelRunner:
     def __init__(self, profile='nbserver'):
-        clients = parallel.Client()
+        clients = parallel.Client(profile=profile)
         clients.block = True
         self.dview = clients[:]
         self.lbview = clients.load_balanced_view()
@@ -17,6 +17,7 @@ class Runner:
 
     def push(self, env):
         self.dview.push(env)
-        
+
+
 
 

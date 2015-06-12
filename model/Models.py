@@ -3,6 +3,7 @@ __author__ = 'dmitru'
 import scipy
 import scipy.integrate
 import networkx as nx
+from networkx.classes.function import create_empty_copy
 import numpy as np
 
 import scipy.integrate as spi
@@ -71,7 +72,8 @@ class LinearModel:
 class OrientableModel:
     '''Describes two-dimensional model of moving agents with communication graph,
     formation reorients intself along the line of the flight'''
-    def __init__(self, com_graph, num_agents, A, B, F, h, x0, D=1e4, r0=0.2, r1=0.01, orientable=True, acc=0):
+    def __init__(self, com_graph, num_agents, A, B, F, h, x0, D=1e4, r0=0.2, r1=0.01, orientable=True, acc=0,
+                 breaks=False, breaks_p=False):
         '''Parameters:
         com_graph - communication graph that agents use,
         agents - list of Agent objects,
@@ -94,7 +96,8 @@ class OrientableModel:
         assert(x0.size == num_agents * 4)
 
         self.text_to_show = None
-        self.CG = com_graph
+        self.initial_graph = com_graph.copy()
+        self.CG = com_graph.copy()
         Q = nx.linalg.adjacency_matrix(com_graph).todense()
         Diag = np.diag([sum([1 for e in com_graph.edges() if e[0] == i]) for i in com_graph.nodes()])
         self.LG = np.dot(np.linalg.pinv(Diag), (Diag - Q))
@@ -114,13 +117,17 @@ class OrientableModel:
         self.acc = acc
         self.orientable = orientable
         self.current_direction = (0, 0)
+        self.breaks = breaks
+        self.breaks_p = breaks_p
+        self.last_t_links_updated = 0
 
     def dx_dt_linear(self, t, x):
+        self.update_links()
+
         # basic dynamics of the model
         y = np.dot(np.kron(np.eye(self.N), self.A), x) + np.dot(self.T1, (x - self.h))
         y = np.asarray(y).reshape(len(x))
 
-        # TODO: make it a model's parameters
         D = self.D
         r0 = self.r0
         r1 = self.r1
@@ -146,13 +153,15 @@ class OrientableModel:
         return y
 
     def dx_dt_orientable(self, t, x):
+        if t - self.last_t_links_updated > 0.4:
+            self.last_t_links_updated = t
+            self.update_links()
         Rz = self.compute_Rz(x, self.h)
 
         # basic dynamics of the model
         y = np.dot(np.kron(np.eye(self.N), self.A), x).reshape((len(x), 1)) + np.dot(self.T1, (x.reshape((len(x), 1)) - Rz))
         y = np.asarray(y).reshape(len(x))
 
-        # TODO: make it a model's parameters
         D = self.D
         r0 = self.r0
         r1 = self.r1
@@ -211,7 +220,7 @@ class OrientableModel:
             temp = np.array(temp)
             delta = temp
 
-            result = (np.linalg.norm(self.delta_prev - delta)) if self.delta_prev is not None else None
+            result = (np.linalg.norm(self.delta_prev - delta)) / (dt * self.N) if self.delta_prev is not None else None
             self.delta_prev = delta
         else:
             ones = np.ones(self.h.size / 4)
@@ -223,7 +232,7 @@ class OrientableModel:
             h_relative = np.array(self.h)
             for i in (0, 2):
                 h_relative += delta[i] * es[i]
-            result = np.linalg.norm(position_vector(h_relative - x))
+            result = np.linalg.norm(position_vector(h_relative - x)) / self.N
 
         h_error = np.linalg.norm(self.rel_h - position_vector(x))
         self.text_to_show = 'Weak formation error: %.6f\n' \
@@ -279,7 +288,7 @@ class OrientableModel:
         self.update_A()
 
     @staticmethod
-    def circular_from_com_graph(com_graph, h, x0, k, f1, f2, D, orientable=True, acc=0):
+    def circular_from_com_graph(com_graph, h, x0, k, f1, f2, D, orientable=True, acc=0, breaks=False, breaks_p=0.5):
         n = len(com_graph.nodes())
         A = np.array([[0.0, 1.0, 0.0, 0.0],
                       [0.0, acc, 0.0, -k],
@@ -291,7 +300,8 @@ class OrientableModel:
                       [0.0, 1.0]])
         F = np.array([[f1,  f2,  0.0, 0.0],
                       [0.0, 0.0, f1,  f2]])
-        return OrientableModel(com_graph, n, A, B, F, h, x0, D, orientable=orientable, acc=acc)
+        return OrientableModel(com_graph, n, A, B, F, h, x0, D, orientable=orientable, acc=acc,
+                               breaks_p=breaks_p, breaks=breaks)
 
     def update_rel_h(self, x):
         ones = np.ones(self.h.size / 4)
@@ -311,3 +321,19 @@ class OrientableModel:
         for i in (0, 2):
             h_relative += delta[i] * es[i]
         self.rel_h = position_vector(h_relative)
+
+    def update_links(self):
+        if not self.breaks:
+            return
+        new_graph = create_empty_copy(self.initial_graph)
+        for edge in self.initial_graph.edges():
+            if np.random.random() <= self.breaks_p:
+                # break the edge
+                pass
+            else:
+                new_graph.add_edge(edge[0], edge[1])
+        self.CG = new_graph
+        Q = nx.linalg.adjacency_matrix(self.CG).todense()
+        Diag = np.diag([sum([1 for e in self.CG.edges() if e[0] == i]) for i in self.CG.nodes()])
+        self.LG = np.dot(np.linalg.pinv(Diag), (Diag - Q))
+        self.T1 = np.kron(self.LG, self.K)
