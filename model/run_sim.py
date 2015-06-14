@@ -28,7 +28,7 @@ k = 0.0
 f1 = -4.0
 f2 = -4.0
 
-model = OrientableModel.circular_from_com_graph(comGraph, h, x0, k, f1, f2)
+model = OrientableModel.from_com_graph(comGraph, h, x0, k, f1, f2)
 
 # tol = 1e-3
 # dt = 0.1

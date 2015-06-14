@@ -125,8 +125,8 @@ class ExperimentManager:
             os.makedirs(ExperimentManager.base_name)
 
     @staticmethod
-    def next_filename(extension='.png', increment=True):
-        res = os.path.join(ExperimentManager.base_name, '%s_%d%s' % (ExperimentManager.name, ExperimentManager.counter, extension))
+    def next_filename(suffix='', extension='.png', increment=True):
+        res = os.path.join(ExperimentManager.base_name, '%s_%s_%d%s' % (ExperimentManager.name, suffix, ExperimentManager.counter, extension))
         if increment:
             ExperimentManager.counter += 1
         return res

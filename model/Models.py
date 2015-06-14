@@ -72,7 +72,8 @@ class LinearModel:
 class OrientableModel:
     '''Describes two-dimensional model of moving agents with communication graph,
     formation reorients intself along the line of the flight'''
-    def __init__(self, com_graph, num_agents, A, B, F, h, x0, D=1e4, r0=0.2, r1=0.01, orientable=True, acc=0,
+    def __init__(self, com_graph, num_agents, A, B, F, h, x0, D=1e4, r0=0.2,
+                 r1=0.01, orientable=True, acc=0,
                  breaks=False, breaks_p=False):
         '''Parameters:
         com_graph - communication graph that agents use,
@@ -288,7 +289,11 @@ class OrientableModel:
         self.update_A()
 
     @staticmethod
-    def circular_from_com_graph(com_graph, h, x0, k, f1, f2, D, orientable=True, acc=0, breaks=False, breaks_p=0.5):
+    def from_com_graph_dict(params):
+        return OrientableModel.from_com_graph(**params)
+
+    @staticmethod
+    def from_com_graph(com_graph, h, x0, k, f1, f2, D, orientable=True, acc=0, breaks=False, breaks_p=0.5):
         n = len(com_graph.nodes())
         A = np.array([[0.0, 1.0, 0.0, 0.0],
                       [0.0, acc, 0.0, -k],

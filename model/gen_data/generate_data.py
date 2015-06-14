@@ -1,3 +1,4 @@
+import json
 import traceback
 from ParallelRunner import ParallelRunner
 
@@ -5,6 +6,9 @@ __author__ = 'dmitru'
 
 import matplotlib
 matplotlib.use('TkAgg')
+
+import networkx as nx
+from networkx.readwrite import json_graph
 
 from pylab import rcParams
 rcParams['figure.figsize'] = 18.5, 10.5
@@ -80,16 +84,15 @@ def measure_convergence(model, T, dt=0.1, tol=1e-3):
         print('Model didn\'t converge in %d steps' % (T / dt))
         return None
 
-def measure_speed_vs_number_of_edges():
-    num_of_agents = 20
-    num_of_com_graphs = 14
-    num_of_experiments_per_graph = 4
-    v0 = (10, 10)
+def gen_data(params):
+    return gen_data_impl(*params)
+
+def gen_data_impl(h, x0, num_of_agents, num_of_com_graphs):
     k = 0.7
     f1 = -4.0
     f2 = -4.0
     dt = 0.01
-    tol = 0.0005
+    tol = 0.005
     T = 30
 
     xs = []
@@ -99,74 +102,29 @@ def measure_speed_vs_number_of_edges():
         print('Starting with com graph #%d/%d: (%d, %d)' % (i, num_of_com_graphs, num_of_agents, num_edges))
         comGraph = ComGraphUtils.random_graph(num_of_agents, num_edges, directed=False)
         ys_experiments = []
-        for j in range(num_of_experiments_per_graph):
-            h = FormationsUtil.extend_position_to_vpv(FormationsUtil.random_positions(num_of_agents), v0[0], v0[1])
-            x0 = FormationsUtil.extend_position_to_vpv(FormationsUtil.random_positions(num_of_agents), v0[0], v0[1])
-            convergence_steps = run_experiment_with_params(comGraph, x0, h, k, f1, f2, T, dt, tol)
-            y = convergence_steps * dt if convergence_steps else None
-            print('%d/%d  %d/%d' % (i, num_of_com_graphs, j, num_of_experiments_per_graph))
-            print(num_edges, convergence_steps * dt if convergence_steps else '-')
-            if y:
-                ys_experiments.append(y)
+        convergence_steps = run_experiment_with_params(comGraph, x0, h, k, f1, f2, T, dt, tol, False, 0)
+        y = convergence_steps * dt if convergence_steps else None
+        print('%d/%d' % (i, num_of_com_graphs))
+        print(num_edges, convergence_steps * dt if convergence_steps else '-')
+        if y:
+            ys_experiments.append(y)
+
         if len(ys_experiments) > 0:
-            xs.append(num_edges)
+            xs.append(json_graph.node_link_data(comGraph))
             ys.append(sum(ys_experiments) / len(ys_experiments))
 
     return xs, ys
 
-def measure_speed_vs_break_p_fixed_graph(p):
-    global x0, h, com_graph
-    k = 0.2
-    f1 = -4.0
-    f2 = -4.0
-    dt = 0.01
-    tol = 0.01
-    T = 80
-    try:
-        res = run_experiment_with_params(com_graph, x0, h, k, f1, f2, T, dt, tol, True, p)
-    except TimeoutError, e:
-        print 'run_experiment_with_params timed out'
-        return None
-    return (p, res)
+def gen_data_test():
+    num_of_agents = 8
+    num_of_com_graphs = 2
+    v0 = (10, 10)
+    h = FormationsUtil.extend_position_to_vpv(FormationsUtil.random_positions(num_of_agents), v0[0], v0[1])
+    x0 = FormationsUtil.extend_position_to_vpv(FormationsUtil.random_positions(num_of_agents), v0[0], v0[1])
+    result = gen_data((h, x0, num_of_agents, num_of_com_graphs))
+    pass
 
-def measure_speed_vs_break_p_fixed_graph_par(args):
-    return measure_speed_vs_break_p_fixed_graph(*args)
-
-def measure_speed_vs_first_eigenvalue_undirected_par(args):
-    return measure_speed_vs_first_eigenvalue_undirected(*args)
-
-def measure_speed_vs_first_eigenvalue_undirected(num_of_agents, num_of_com_graphs, x0, h):
-    k = 0.0
-    f1 = -4.0
-    f2 = -4.0
-    dt = 0.01
-    tol = 0.01
-    T = 30
-
-    xs = []
-    ys = []
-    for i in range(num_of_com_graphs):
-        num_edges = random.randint(num_of_agents, ((num_of_agents - 1)*num_of_agents)/2)
-        print('Starting with com graph #%d/%d: (%d, %d)' % (i, num_of_com_graphs, num_of_agents, num_edges))
-        comGraph = ComGraphUtils.random_graph(num_of_agents, num_edges, directed=False)
-        convergence_steps = run_experiment_with_params(comGraph, x0, h, k, f1, f2, T, dt, tol)
-        L = laplace_matrix(comGraph)
-        assert np.max(L - L.transpose()) < 1e-6
-        eigenvalues = sorted(np.linalg.eigvals(L))
-        x = np.real(eigenvalues[1]).tolist()
-
-        assert np.imag(eigenvalues[1]) < 1e-6
-        y = convergence_steps * dt if convergence_steps else None
-        print('%d/%d' % (i, num_of_com_graphs))
-        print(x, convergence_steps * dt if convergence_steps else '-')
-        if y:
-            xs.append(x)
-            ys.append(y)
-    return xs, ys
-
-if __name__ == '__main__':
-    ExperimentManager.init('breaking_links', root_path='/home/dmitry/Music/flocks/results')
-
+def run_gen_data():
     parallel = True
 
     if parallel:
@@ -174,23 +132,31 @@ if __name__ == '__main__':
         cluster.execute(['from functools import wraps',
                         'import errno',
                         'import os',
-                         'import signal'])
+                        'import signal',
+                        'import networkx as nx',
+                        'from networkx.readwrite import json_graph'])
 
-        cluster.push(dict(measure_speed_vs_first_eigenvalue_undirected=measure_speed_vs_first_eigenvalue_undirected,
-                          measure_speed_vs_break_p_fixed_graph=measure_speed_vs_break_p_fixed_graph,
+        cluster.push(dict(gen_data=gen_data,
+                          gen_data_impl=gen_data_impl,
                           measure_convergence=measure_convergence,
                           run_experiment_with_params=run_experiment_with_params,
                           TimeoutError=TimeoutError,
                           timeout=timeout))
 
-    num_experiments = 1
+    num_experiments = 10
 
     for exper_iter in range(num_experiments):
         print 'EXPERIMENT %d/%d' % (exper_iter, num_experiments)
-        K = 10
-        cmap = get_cmap(K + 1)
-        num_of_agents = random.randint(8, 14)
+        now = datetime.now()
+        num_of_agents = random.randint(10, 20)
+        num_of_com_graphs = 10
         num_edges = random.randint(num_of_agents, num_of_agents * (num_of_agents - 1))
+        experiment_name = 'fixed_params_%d_agents_%d_edges_' % (num_of_agents, num_edges)
+        suffix = '%d_%d_%d__%d_%d_%d' % (now.year, now.month, now.day, now.hour, now.minute, now.second)
+        K = 10
+        #num_of_agents = random.randint(10, 20)
+        #num_of_com_graphs = 10
+        #num_edges = random.randint(num_of_agents, num_of_agents * (num_of_agents - 1))
         v0 = (10, 10)
         h = FormationsUtil.extend_position_to_vpv(FormationsUtil.random_positions(num_of_agents), v0[0], v0[1])
         x0 = FormationsUtil.extend_position_to_vpv(FormationsUtil.random_positions(num_of_agents), v0[0], v0[1])
@@ -199,38 +165,41 @@ if __name__ == '__main__':
             cluster.dview['h'] = h
             cluster.dview['x0'] = x0
         try:
-            XS = []
-            YS = []
             for k in range(K):
+                ExperimentManager.init('data_%d' % k, root_path='/home/dmitry/Music/flocks/data/fixed_params/%s%s_%d' % (experiment_name, suffix, exper_iter))
                 print 'FINISHED: %d/%d' % (k, K)
                 com_graph = ComGraphUtils.random_graph(num_of_agents, num_edges, directed=True)
 
                 if parallel:
                     cluster.dview['com_graph'] = com_graph
-                ps = np.arange(0.4, 0.90, 0.01)
-                args = [(p, ) for p in ps]
+                args = ((h, x0, num_of_agents, num_of_com_graphs) for i in range(8))
 
                 if parallel:
-                    results = cluster.lbview.map(measure_speed_vs_break_p_fixed_graph_par, args)
+                    results = cluster.lbview.map(gen_data, args)
                     results = list(map(lambda x: (None, None) if x is None else x, results))
                 else:
-                    results = map(measure_speed_vs_break_p_fixed_graph_par, args)
+                    results = map(gen_data, args)
                 xs = []
                 ys = []
                 for result in results:
-                    print result
                     xs += [result[0]]
                     ys += [result[1]]
-                plt.plot(xs, ys, color=cmap(k))
-                XS.append(xs)
-                YS.append(ys)
-            plt.savefig(ExperimentManager.next_filename(increment=False), dpi=200)
-            plt.clf()
-            f_params = open(ExperimentManager.next_filename(extension='.txt', increment=False), 'w')
-            f_params.write('experiment: %d\nnum_of_agents: %d\nnum_of_edges: %d' % (exper_iter, num_of_agents, num_edges))
-            f_params.close()
-            np.savetxt(ExperimentManager.next_filename(extension='.csv'), np.vstack((np.array(XS), np.array(YS))), delimiter=",")
+                xs = sum(xs, [])
+                ys = sum(ys, [])
+                f_params = open(ExperimentManager.next_filename(suffix='params', extension='.txt', increment=False), 'w')
+                f_params.write(json.dumps('experiment: %d\nnum_of_agents: %d\nnum_of_edges: %d' % (exper_iter, num_of_agents, num_edges)))
+                f_params.close()
+                results = []
+                for i in range(len(xs)):
+                    results.append({'graph': xs[i], 'results': [ys[i]]})
+                f_graph = open(ExperimentManager.next_filename(suffix='results', extension='.txt'), 'w')
+                f_graph.write(json.dumps(results))
+                f_graph.close()
         except Exception, e:
             print 'Error in experiment %d, k = %d: %s' % (exper_iter, k, traceback.format_exc())
+
+if __name__ == '__main__':
+    run_gen_data()
+
 
 
