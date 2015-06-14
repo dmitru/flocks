@@ -1,3 +1,6 @@
+from datetime import datetime
+import os
+
 __author__ = 'dmitru'
 
 import numpy as np
@@ -88,7 +91,54 @@ class FormationsUtil:
             vx0 * np.kron(ones, np.array([0, 1, 0, 0])) + \
             vy0 * np.kron(ones, np.array([0, 0, 0, 1]))
 
+def laplace_matrix(G):
+    import networkx as nx
+    Q = nx.linalg.adjacency_matrix(G).todense()
+    Diag = np.diag([sum([1 for e in G.edges() if e[0] == i]) for i in G.nodes()])
+    return (Diag - Q)
 
+def rot_matrix(v):
+        '''Returns the two-dimensional rotation matrix 2x2 that
+        rotates vector e1 to point in v direction'''
+        #print(np.linalg.norm(v))
+        t = np.array(v) / np.linalg.norm(v)
+        return np.array([
+            [t[0], -t[1]],
+            [t[1], t[0]]
+        ])
+
+import matplotlib.cm as cmx
+import matplotlib.colors as colors
+
+class ExperimentManager:
+    @staticmethod
+    def init(name='experiment', root_path='.', append_timestamp=True):
+        np.random.seed(123)
+
+        ExperimentManager.counter = 0
+        ExperimentManager.name = name
+        if append_timestamp:
+            now = datetime.now()
+            ExperimentManager.name += '_' + '%d_%d_%d__%d_%d_%d' % (now.year, now.month, now.day, now.hour, now.minute, now.second)
+        ExperimentManager.base_name = os.path.join(root_path, name)
+        if not os.path.exists(ExperimentManager.base_name):
+            os.makedirs(ExperimentManager.base_name)
+
+    @staticmethod
+    def next_filename(suffix='', extension='.png', increment=True):
+        res = os.path.join(ExperimentManager.base_name, '%s_%s_%d%s' % (ExperimentManager.name, suffix, ExperimentManager.counter, extension))
+        if increment:
+            ExperimentManager.counter += 1
+        return res
+
+def get_cmap(N):
+    '''Returns a function that maps each index in 0, 1, ... N-1 to a distinct
+    RGB color.'''
+    color_norm  = colors.Normalize(vmin=0, vmax=N-1)
+    scalar_map = cmx.ScalarMappable(norm=color_norm, cmap='hsv')
+    def map_index_to_rgb_color(index):
+        return scalar_map.to_rgba(index)
+    return map_index_to_rgb_color
 
 if __name__ == '__main__':
     for i in range(1, 8):
