@@ -65,3 +65,51 @@
 \fancyhf{}                          % Очищаем текущие значения
 \fancyhead[C]{\thepage}             % Печатаем номер страницы на середине верхнего поля
 \renewcommand{\headrulewidth}{0pt}  % Убираем разделительную линию
+
+% Векторы жирным шрифтом
+\renewcommand{\vec}[1]{\mathbf{#1}}
+\renewcommand{\hat}[1]{\oldhat{\mathbf{#1}}}
+
+% Векторы-столбцы
+\makeatletter
+\newcommand{\veccol}[2][r]{%
+  \gdef\@VORNE{1}
+  \left(\hskip-\arraycolsep%
+    \begin{array}{#1}\vekSp@lten{#2}\end{array}%
+  \hskip-\arraycolsep\right)}
+
+\def\vekSp@lten#1{\xvekSp@lten#1;vekL@stLine;}
+\def\vekL@stLine{vekL@stLine}
+\def\xvekSp@lten#1;{\def\temp{#1}%
+  \ifx\temp\vekL@stLine
+  \else
+    \ifnum\@VORNE=1\gdef\@VORNE{0}
+    \else\@arraycr\fi%
+    #1%
+    \expandafter\xvekSp@lten
+  \fi}
+\makeatother
+
+% Окружения для теорем. определений и т.д.
+\newtheorem{theorem}{Теорема}[section]
+\newtheorem{lemma}[theorem]{Лемма}
+\newtheorem{proposition}[theorem]{Предложение}
+\newtheorem{corollary}[theorem]{Следствие}
+
+\newenvironment{proof}[1][Доказательство]{\begin{trivlist}
+\item[\hskip \labelsep {\bfseries #1}]}{\end{trivlist}}
+
+\newcounter{definitionCounter}
+\stepcounter{definitionCounter}
+\newenvironment{definition}[1][Определение]
+{\begin{trivlist}
+\item[\hskip \labelsep {\bfseries #1 \arabic{definitionCounter}}]\stepcounter{definitionCounter}}
+{\end{trivlist}}
+
+\newenvironment{example}[1][Пример]
+{\begin{trivlist}
+\item[\hskip \labelsep {\bfseries #1}]}
+{\end{trivlist}}
+
+\newenvironment{remark}[1][Замечание]{\begin{trivlist}
+\item[\hskip \labelsep {\bfseries #1}]}{\end{trivlist}}
