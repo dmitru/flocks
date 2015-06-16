@@ -91,10 +91,6 @@
 \makeatother
 
 % Окружения для теорем. определений и т.д.
-\newtheorem{theorem}{Теорема}[section]
-\newtheorem{lemma}[theorem]{Лемма}
-\newtheorem{proposition}[theorem]{Предложение}
-\newtheorem{corollary}[theorem]{Следствие}
 
 \newenvironment{proof}[1][Доказательство]{\begin{trivlist}
 \item[\hskip \labelsep {\bfseries #1}]}{\end{trivlist}}
@@ -104,6 +100,20 @@
 \newenvironment{definition}[1][Определение]
 {\begin{trivlist}
 \item[\hskip \labelsep {\bfseries #1 \arabic{definitionCounter}}]\stepcounter{definitionCounter}}
+{\end{trivlist}}
+
+\newcounter{propositionCounter}
+\stepcounter{propositionCounter}
+\newenvironment{proposition}[1][Утверждение]
+{\begin{trivlist}
+\item[\hskip \labelsep {\bfseries #1 \arabic{propositionCounter}}]\stepcounter{propositionCounter}}
+{\end{trivlist}}
+
+\newcounter{theoremCounter}
+\stepcounter{theoremCounter}
+\newenvironment{theorem}[1][Теорема]
+{\begin{trivlist}
+\item[\hskip \labelsep {\bfseries #1 \arabic{theoremCounter}}]\stepcounter{theoremCounter}}
 {\end{trivlist}}
 
 \newenvironment{example}[1][Пример]
