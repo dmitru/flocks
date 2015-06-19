@@ -29,9 +29,9 @@ class FormationsUtil:
                          1.0, 3.0,
                          2.0, 0.0])
     @staticmethod
-    def arrow_tip_6():
+    def arrow_tip_6(r=1.0):
         '''Returns vector, describing formation of arrow tip configuration for 6 agents'''
-        return np.array([0.0, 0.0,
+        return r * np.array([0.0, 0.0,
                          1.0, 0.0,
                          2.0, 0.0,
                          0.5, 1.5,
@@ -54,10 +54,10 @@ class FormationsUtil:
         return np.array(t)
 
     @staticmethod
-    def line_x(k):
+    def line_x(k, r=1.0):
         t = []
         for i in range(k):
-            t.append(float(i))
+            t.append(r*float(i))
             t.append(0.0)
         return np.array(t)
 
@@ -147,3 +147,5 @@ if __name__ == '__main__':
     for i in range(1, 8):
         p = FormationsUtil.random_positions(i)
         print(FormationsUtil.extend_position_to_vpv(p, vx0=1.0, vy0=-1.0))
+
+

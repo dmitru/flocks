@@ -8,7 +8,7 @@ import numpy as np
 
 import scipy.integrate as spi
 
-from Utils import velocity_vector, position_vector, rot_matrix
+from Utils import position_vector, rot_matrix
 
 
 class LinearModel:
@@ -121,6 +121,7 @@ class OrientableModel:
         self.breaks = breaks
         self.breaks_p = breaks_p
         self.last_t_links_updated = 0
+        self.dx_dy_orientable_prev_t = -1
 
     def dx_dt_linear(self, t, x):
         self.update_links()
@@ -154,7 +155,10 @@ class OrientableModel:
         return y
 
     def dx_dt_orientable(self, t, x):
-        if t - self.last_t_links_updated > 0.4:
+        if (t - self.dx_dy_orientable_prev_t) < 1e-6:
+            pass
+
+        if t - self.last_t_links_updated > 0.1:
             self.last_t_links_updated = t
             self.update_links()
         Rz = self.compute_Rz(x, self.h)
@@ -190,8 +194,11 @@ class OrientableModel:
 
     def simulation_start(self):
         self.ode = spi.ode(self.dx_dt_orientable if self.orientable else self.dx_dt_linear)
-        self.ode.set_integrator('vode', order=15, nsteps=5000, method='bdf')
+        self.ode.set_integrator('vode', order=15, nsteps=500, method='bdf')
         self.ode.set_initial_value(self.x0, 0)
+
+    def current_state(self):
+        return self.ode.y, self.rel_h
 
     def simulation_step(self, dt):
         self.ode.integrate(self.ode.t + dt)
@@ -280,7 +287,7 @@ class OrientableModel:
     def update_A(self):
         self.A = np.array(
             [ [0.0, 1.0, 0.0, 0.0],
-              [0.0, self.acc, 0.0, -self.k],
+              [0.0, 0, 0.0, -self.k],
               [0.0, 0.0, 0.0, 1.0],
               [0.0, self.k,   0.0, self.acc]])
 
@@ -296,7 +303,7 @@ class OrientableModel:
     def from_com_graph(com_graph, h, x0, k, f1, f2, D, orientable=True, acc=0, breaks=False, breaks_p=0.5):
         n = len(com_graph.nodes())
         A = np.array([[0.0, 1.0, 0.0, 0.0],
-                      [0.0, acc, 0.0, -k],
+                      [0.0, 0, 0.0, -k],
                       [0.0, 0.0, 0.0, 1.0],
                       [0.0, k,   0.0, acc]])
         B = np.array([[0.0, 0.0],

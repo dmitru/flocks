@@ -15,7 +15,8 @@ from Utils import FormationsUtil, position_vector, get_cmap
 class ModelAnimator(object):
     """An animated scatter plot using matplotlib.animations.FuncAnimation.
     Params: T - time to animate, dt - time step to show"""
-    def __init__(self, model, dt=0.01, draw_each_kth_frame=10, field_size=10, edges=True, desired_pos=True, trace=True, trace_size=200, trace_step=2):
+    def __init__(self, model, dt=0.01, draw_each_kth_frame=10, field_size=10, edges=True, desired_pos=True,
+                 trace=True, trace_size=2000, trace_step=2):
         self.model = model
         self.N = model.N
         self.dt = dt
@@ -32,7 +33,7 @@ class ModelAnimator(object):
         self.plot_trace = trace
 
         # Setup the figure and axes...
-        self.fig = plt.figure(figsize=(18, 16))
+        self.fig = plt.figure(figsize=(18, 10))
         self.fig.canvas.mpl_connect('button_press_event', self.onClick)
         self.fig.canvas.mpl_connect('key_press_event', self.onKeyPress)
         self.anim_ax = self.fig.add_subplot(121, aspect='equal')
@@ -76,6 +77,11 @@ class ModelAnimator(object):
 
     def onClick(self, event):
         self.pause ^= True
+        if self.pause:
+            time.sleep(1)
+            for _ in range(10):
+                self.update(1)
+            self.fig.savefig('/home/dmitry/figure.png', dpi=600)
 
     def onKeyPress(self, event):
         if event.key == 'left':
@@ -86,9 +92,12 @@ class ModelAnimator(object):
     def data_stream(self):
         cnt = 0
         while True:
-            for _ in range(self.draw_each_kth_frame):
-                ys, rel_h = self.model.simulation_step(self.dt)
-            cnt += 1
+            if self.pause:
+                ys, rel_h = self.model.current_state()
+            else:
+                for _ in range(self.draw_each_kth_frame):
+                    ys, rel_h = self.model.simulation_step(self.dt)
+                cnt += 1
             yield cnt, ys, rel_h, self.model.compute_formation_quality(ys, self.dt)
 
     def update(self, i):
@@ -96,16 +105,11 @@ class ModelAnimator(object):
         for c in self.anim_ax.collections:
             self.anim_ax.collections.remove(c)
 
-        if quality is not None:
+        if quality is not None and not self.pause:
             while len(self.quality_y) < len(quality):
                 self.quality_y.append([])
             for i in range(len(quality)):
                 self.quality_y[i].append(quality[i])
-
-        self.update_draw_bounds(data)
-        self.scat = self.anim_ax.scatter(data[::4], data[2::4], s=self.s, c=self.c, animated=True)
-        if self.plot_desired_positions:
-            self.scat2 = self.anim_ax.scatter(rel_h[::2], rel_h[1::2], s=self.s * 3, c=self.c, animated=True, alpha=0.3, marker='s')
 
         #self.scat_h = self.anim_ax_2.scatter(self.model.h[::4], self.model.h[2::4], s=self.s, c='blue', animated=True)
         #self.scat_h_2 = self.anim_ax_2.scatter(self.model.rel_h[::2], self.model.rel_h[1::2], s=self.s, c='red', animated=True)
@@ -138,6 +142,11 @@ class ModelAnimator(object):
             trace_segment_collection = mc.LineCollection(trace_segments, colors=trace_colors)
             if self.update_called_one_time:
                 self.traces = self.anim_ax.add_collection(trace_segment_collection)
+
+        self.update_draw_bounds(data)
+        self.scat = self.anim_ax.scatter(data[::4], data[2::4], s=self.s, c=self.c, animated=True)
+        if self.plot_desired_positions:
+            self.scat2 = self.anim_ax.scatter(rel_h[::2], rel_h[1::2], s=self.s * 3, c=self.c, animated=True, alpha=0.3, marker='s')
 
         t = list(zip(self.quality_y))
         plot_args = []

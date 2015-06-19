@@ -97,7 +97,7 @@ def gen_data_impl(h, x0, num_of_agents, num_of_com_graphs):
 
     xs = []
     ys = []
-    for i in range(num_of_com_graphs):
+    for i in range(generate_data.py):
         num_edges = random.randint(num_of_agents, ((num_of_agents - 1)*num_of_agents)/2)
         print('Starting with com graph #%d/%d: (%d, %d)' % (i, num_of_com_graphs, num_of_agents, num_edges))
         comGraph = ComGraphUtils.random_graph(num_of_agents, num_edges, directed=False)
@@ -191,7 +191,12 @@ def run_gen_data():
                 f_params.close()
                 results = []
                 for i in range(len(xs)):
-                    results.append({'graph': xs[i], 'results': [ys[i]]})
+                    results.append(
+                        {
+                            'graph': xs[i],
+                            'results': [ys[i]]
+                         }
+                    )
                 f_graph = open(ExperimentManager.next_filename(suffix='results', extension='.txt'), 'w')
                 f_graph.write(json.dumps(results))
                 f_graph.close()

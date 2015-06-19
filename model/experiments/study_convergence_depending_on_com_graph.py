@@ -189,7 +189,7 @@ if __name__ == '__main__':
         print 'EXPERIMENT %d/%d' % (exper_iter, num_experiments)
         K = 10
         cmap = get_cmap(K + 1)
-        num_of_agents = random.randint(8, 14)
+        num_of_agents = random.randint(6, 20)
         num_edges = random.randint(num_of_agents, num_of_agents * (num_of_agents - 1))
         v0 = (10, 10)
         h = FormationsUtil.extend_position_to_vpv(FormationsUtil.random_positions(num_of_agents), v0[0], v0[1])
