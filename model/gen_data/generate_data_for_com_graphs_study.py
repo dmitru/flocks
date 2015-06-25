@@ -99,6 +99,10 @@ def run_gen_data():
             T = 30
         )
 
+        args = []
+        for sweep_param in sweep_param_options:
+            args.append(sweep_param)
+
         if parallel:
             cluster.dview['fixed_params'] = fixed_params
         try:
@@ -112,8 +116,20 @@ def run_gen_data():
 
             if parallel:
                 print 'Launching %d jobs in parallel...' % len(args)
-                #TODO: split into chunks for easier progress reporting
-                results = cluster.lbview.map(gen_data, args)
+                args_chunks = []
+                cur_chunk = []
+                i = 0
+                while i < len(args):
+                    cur_chunk.append(args[i])
+                    if len(cur_chunk) >= 21:
+                        args_chunks.append(cur_chunk)
+                        cur_chunk = []
+                    i += 1
+                results = []
+                for i, args_chunk in enumerate(args_chunks):
+                    results_chunk = cluster.lbview.map(gen_data, args_chunk)
+                    print 'Finished %d/%d job chunks' % (i, len(args_chunks))
+                    results += results_chunk
             else:
                 results = map(gen_data, args)
             results = filter(lambda res: res['results'] is not None, results)
