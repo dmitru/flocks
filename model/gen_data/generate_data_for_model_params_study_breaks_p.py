@@ -30,15 +30,15 @@ from Utils import FormationsUtil, ExperimentManager
 ##
 
 RESULT_ROOT        = '/home/dmitry/flocks_results/'
-RUN_NAME           = 'graph_optimization_com_graphs_nondir_algo_large_n_20_e_from_40'
-NUM_OF_EXPERIMENTS = 4
+RUN_NAME           = 'breaks_p_smoothing'
+NUM_OF_EXPERIMENTS = 5
+NUM_OF_SMOOTHING   = 50
+CHUNK_SIZE = 8
 parallel           = True
 save_results       = True
 
-sweep_param_name = 'com_graph'
-#sweep_param_options = [(v0, 0.0) for v0 in np.arange(1.5, 10, 0.1)] # v0
-#sweep_param_options = np.arange(0.0, 14.0, 0.2)
-sweep_param_options = []
+sweep_param_name = 'breaks_p'
+breaks_ps = list(np.arange(0.0, 0.5, 0.1)) + list(np.arange(0.5, 0.7, 0.05)) + list(np.arange(0.7, 0.98, 0.02))
 
 def prepare_experiment_params(fixed_params, sweep_params):
     # Set up params that are fixed during the experiment
@@ -51,13 +51,16 @@ def prepare_experiment_params(fixed_params, sweep_params):
 fixed_params = None
 params = None
 
-#num_of_agents = random.randint(14, 24)
-#num_edges = random.randint(num_of_agents * 3, num_of_agents * (num_of_agents - 1) / 2)
-num_of_agents = 20
-num_edges = 30
+graph_type = 'random'
+
+def build_graph(num_agents, num_edges, type):
+    if type == 'random':
+        return ComGraphUtils.random_graph(num_agents, num_edges, directed=False)
+    else:
+        return ComGraphUtils.best_ac_graph(num_agents, num_edges)
 
 def run_gen_data():
-    global fixed_params, sweep_param_options, num_edges
+    global fixed_params, sweep_param_options, num_edges, graph_type
 
     if parallel:
         cluster = init_cluster()
@@ -67,28 +70,38 @@ def run_gen_data():
     run_dirname = os.path.join(RESULT_ROOT, '%s_%s' % (RUN_NAME, run_dirsuffix))
 
     for exper_iter in range(1, NUM_OF_EXPERIMENTS + 1):
-        num_edges += 40
+
         print 'EXPERIMENT %d/%d' % (exper_iter, NUM_OF_EXPERIMENTS)
         now = datetime.now()
         experiment_dirsuffix = '%d_%d_%d__%d_%d_%d' % (now.year, now.month, now.day, now.hour, now.minute, now.second)
         experiment_dirname = 'experiment_%d_model_params_%s_%s' % (exper_iter, sweep_param_name, experiment_dirsuffix)
 
+        num_of_agents = random.randint(14, 24)
+        num_edges = random.randint(num_of_agents * 3, num_of_agents * (num_of_agents - 1) / 2)
+
         sweep_param_options = []
-        for i in range(4000):
-            com_graph = ComGraphUtils.random_graph(num_of_agents, num_edges, directed=False)
-            sweep_param_options.append(com_graph)
+        group_tag = 0
+        for breaks_p in breaks_ps:
+            group_tag += 1
+            for i in range(NUM_OF_SMOOTHING):
+                x0 = FormationsUtil.random_positions(num_of_agents)
+                h = FormationsUtil.random_positions(num_of_agents)
+                sweep_param_options.append({
+                    'breaks_p': breaks_p,
+                    'x0': x0,
+                    'h' : h,
+                    'group_tag': group_tag
+                })
         # Params that are held fixed during the experiment
         fixed_params = dict(
             v0 = (10.0, 10.0),
+            com_graph = build_graph(num_of_agents, num_edges, graph_type),
             k = 0,
-            x0 = FormationsUtil.random_positions(num_of_agents),
-            h = FormationsUtil.random_positions(num_of_agents),
             f1 = -4.0,
             f2 = -4.0,
             dt = 0.01,
             tol = 0.002,
-            breaks = False,
-            breaks_p = 0.0,
+            breaks = True,
             T = 30
         )
 
@@ -101,12 +114,24 @@ def run_gen_data():
             # Prepare arguments for execution
             args = []
             for sweep_param in sweep_param_options:
-                args.append({sweep_param_name: sweep_param})
+                args.append(sweep_param)
 
             if parallel:
                 print 'Launching %d jobs in parallel...' % len(args)
-                #TODO: split into chunks for easier progress reporting
-                results = cluster.lbview.map(gen_data, args)
+                args_chunks = []
+                cur_chunk = []
+                i = 0
+                while i < len(args):
+                    cur_chunk.append(args[i])
+                    if len(cur_chunk) >= CHUNK_SIZE:
+                        args_chunks.append(cur_chunk)
+                        cur_chunk = []
+                    i += 1
+                results = []
+                for i, args_chunk in enumerate(args_chunks):
+                    results_chunk = cluster.lbview.map(gen_data, args_chunk)
+                    print 'Finished %d/%d job chunks' % (i, len(args_chunks))
+                    results += results_chunk
             else:
                 results = map(gen_data, args)
             results = filter(lambda res: res['results'] is not None, results)

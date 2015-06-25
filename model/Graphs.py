@@ -78,5 +78,31 @@ class ComGraphUtils:
                 edges_not_taken.remove((b, a))
         return G
 
+    @staticmethod
+    def best_ac_graph(n, e, debug=False):
+        assert (e <= (n*(n-1))/2)
+        G = nx.DiGraph()
+        for i in range(n):
+            G.add_node(i)
+        for i in range(n - 1):
+            G.add_edge(i, i + 1)
+            G.add_edge(i + 1, i)
 
+        min_degree = 1
+        while len(G.edges()) < 2*e:
+            vertices_min_degree = [n for n in G.nodes() if G.degree(n) <= min_degree]
+            edges_pool = []
+            for i in vertices_min_degree:
+                for j in vertices_min_degree:
+                    if i > j and (j, i) not in G.edges() and (i, j) not in G.edges():
+                        edges_pool.append((j, i))
+            if debug:
+                print(min_degree, edges_pool)
+            if len(edges_pool) == 0:
+                min_degree += 1
+            else:
+                edge = random.sample(edges_pool, 1)[0]
+                G.add_edge(edge[0], edge[1])
+                G.add_edge(edge[1], edge[0])
+        return G
 

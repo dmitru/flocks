@@ -78,8 +78,10 @@ class FormationsUtil:
         return np.linalg.norm(delta)
 
     @staticmethod
-    def random_positions(num_agents, r=1.0):
+    def random_positions(num_agents, r=1.0, seed=None):
+        random.seed(seed)
         result = [2 * r * (random.random() - 0.5) for _ in range(2*num_agents)]
+        random.seed(None)
         return result
 
     @staticmethod

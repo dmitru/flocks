@@ -30,8 +30,15 @@ from Utils import FormationsUtil, ExperimentManager
 ##
 
 RESULT_ROOT        = '/home/dmitry/flocks_results/'
-RUN_NAME           = 'graph_optimization_com_graphs_nondir_algo_large_n_20_e_from_40'
-NUM_OF_EXPERIMENTS = 4
+RUN_NAME           = 'graph_optimization_n_e_grid_algo'
+
+ns = list(range(6, 20, 2))
+n_es = []
+for n in ns:
+    es_n = range(n, int(n * (n-1) / 2), 2)
+    n_es += [(n, es) for es in es_n]
+
+NUM_OF_EXPERIMENTS = len(n_es)
 parallel           = True
 save_results       = True
 
@@ -53,11 +60,9 @@ params = None
 
 #num_of_agents = random.randint(14, 24)
 #num_edges = random.randint(num_of_agents * 3, num_of_agents * (num_of_agents - 1) / 2)
-num_of_agents = 20
-num_edges = 30
 
 def run_gen_data():
-    global fixed_params, sweep_param_options, num_edges
+    global fixed_params, sweep_param_options, n_es
 
     if parallel:
         cluster = init_cluster()
@@ -67,22 +72,24 @@ def run_gen_data():
     run_dirname = os.path.join(RESULT_ROOT, '%s_%s' % (RUN_NAME, run_dirsuffix))
 
     for exper_iter in range(1, NUM_OF_EXPERIMENTS + 1):
-        num_edges += 40
+        num_edges = n_es[exper_iter][1]
+        num_of_agents = n_es[exper_iter][0]
         print 'EXPERIMENT %d/%d' % (exper_iter, NUM_OF_EXPERIMENTS)
         now = datetime.now()
         experiment_dirsuffix = '%d_%d_%d__%d_%d_%d' % (now.year, now.month, now.day, now.hour, now.minute, now.second)
-        experiment_dirname = 'experiment_%d_model_params_%s_%s' % (exper_iter, sweep_param_name, experiment_dirsuffix)
+        experiment_dirname = 'experiment_%d_%s_%s__%s_%s' % (exper_iter, sweep_param_name, experiment_dirsuffix,
+                                                             num_of_agents, num_edges)
 
         sweep_param_options = []
-        for i in range(4000):
-            com_graph = ComGraphUtils.random_graph(num_of_agents, num_edges, directed=False)
+        for i in range(1000):
+            com_graph = ComGraphUtils.best_ac_graph(num_of_agents, num_edges)
             sweep_param_options.append(com_graph)
         # Params that are held fixed during the experiment
         fixed_params = dict(
             v0 = (10.0, 10.0),
             k = 0,
-            x0 = FormationsUtil.random_positions(num_of_agents),
-            h = FormationsUtil.random_positions(num_of_agents),
+            x0 = FormationsUtil.random_positions(num_of_agents, seed=123),
+            h = FormationsUtil.random_positions(num_of_agents, seed=452),
             f1 = -4.0,
             f2 = -4.0,
             dt = 0.01,
