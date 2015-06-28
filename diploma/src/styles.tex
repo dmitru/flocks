@@ -1,7 +1,7 @@
 
 %%% Макет страницы %%%
 % Выставляем значения полей (ГОСТ 7.0.11-2011, 5.3.7)
-\geometry{a4paper,top=2cm,bottom=2cm,left=2.5cm,right=1cm}
+\geometry{a4paper,top=2cm,bottom=2cm,left=3cm,right=2cm}
 
 \def\wl{\par \vspace{\baselineskip}}
 
@@ -30,7 +30,7 @@
 
 %%% Библиография %%%
 \makeatletter
-\bibliographystyle{utf8gost780u}     % Оформляем библиографию по ГОСТ 7.1 (ГОСТ Р 7.0.11-2011, 5.6.7)
+\bibliographystyle{ugost2008}     % Оформляем библиографию по ГОСТ 7.1 (ГОСТ Р 7.0.11-2011, 5.6.7)
 \renewcommand{\@biblabel}[1]{#1.}   % Заменяем библиографию с квадратных скобок на точку
 \makeatother
 
@@ -68,7 +68,6 @@
 
 % Векторы жирным шрифтом
 \renewcommand{\vec}[1]{\mathbf{#1}}
-\renewcommand{\hat}[1]{\oldhat{\mathbf{#1}}}
 
 % Векторы-столбцы
 \makeatletter
